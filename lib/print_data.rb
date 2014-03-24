@@ -1,72 +1,33 @@
-require "thread"
-puts "Synchronize Thread"
+require 'thread'
+require '../lib/semaphore.rb'
 
-@data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-@counts = 0
 @max = 2
-@time = 3
+@thread_number = 5
 
+mutex = Mutex.new
+semaphores = Semaphore.new(@max)
 
-def print_data(num)
-  @counts += 1
-  @data = @data[1..-1]
-  sleep num
-  @counts -= 1
-end
+data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 
-t1 = Time.now
-
-thread_1 = Thread.new do
-  while @data.size > 0 do
-    if @counts < @max
-      print_data @time
-      puts "thread 1"
+@thread_number.times do |x|
+  thread = Thread.new do
+    while (data.length > 0) do
+      semaphores.synchronize do
+        mutex.synchronize do
+          num = data[0]
+          data = data[1..-1]
+          print_data x, num
+        end
+        sleep 1
+      end
+      puts "Thread #{x} ended\n"
     end
   end
 end
 
-thread_2 = Thread.new do
-  while @data.size > 0 do
-    if @counts < @max
-      print_data @time
-      puts "thread 2"
-    end
-  end
+
+def print_data(thread, num)
+  puts "Thread #{thread} printed out number #{num}\n"
 end
 
-thread_3 = Thread.new do
-  while @data.size > 0 do
-    if @counts < @max
-      print_data @time
-      puts "thread 3"
-    end
-  end
-end
-
-thread_4 = Thread.new do
-  while @data.size > 0 do
-    if @counts < @max
-      print_data @time
-      puts "thread 4"
-    end
-  end
-end
-
-thread_5 = Thread.new do
-  while @data.size > 0 do
-    if @counts < @max
-      print_data @time
-      puts "thread 5"
-    end
-  end
-end
-
-thread_1.join
-thread_2.join
-thread_3.join
-thread_4.join
-thread_5.join
-
-t2 = Time.now
-
-puts t2 - t1
+sleep 20
