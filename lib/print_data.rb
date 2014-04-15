@@ -7,27 +7,60 @@ require '../lib/semaphore.rb'
 mutex = Mutex.new
 semaphores = Semaphore.new(@max)
 
-data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+queue = Queue.new
+#(1..15).each do |i|
+#  queue.push i
+#end
+
+threads =[]
 
 @thread_number.times do |x|
-  thread = Thread.new do
+  threads << Thread.new do
     loop do
       semaphores.synchronize do
         num = 0
         mutex.synchronize do
-          num = data[0]
-          data = data[1..-1]
+          num = queue.pop unless queue.empty?
         end
-        print_data x, num if num != nil
+        if num != 0
+          print_data x, num
+        else
+          Thread.stop
+        end
       end
     end
   end
 end
 
-
-def print_data(thread, num)
-  sleep 1
-  puts "Thread #{thread} printed out number #{num}\n"
+producer = Thread.new do
+  begin
+    loop do
+      num = Random.rand(100)
+      mutex.synchronize do
+        queue.push num
+      end
+      push_data "producer", num
+      if queue.size > 0
+        threads.each {|t| t.wakeup}
+      end
+    end
+  rescue => e
+    p e
+  end
 end
 
-sleep 10
+
+def print_data(thread, num)
+  puts "Thread #{thread} printed out number #{num}\n"
+  sleep 1
+end
+
+def push_data(thread, num)
+  puts "Thread #{thread} push #{num} to queue\n"
+  sleep 3
+end
+
+threads.each do |t|
+  t.join
+end
+producer.join
