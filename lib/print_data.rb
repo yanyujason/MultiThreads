@@ -7,10 +7,12 @@ require '../lib/semaphore.rb'
 mutex = Mutex.new
 semaphores = Semaphore.new(@max)
 
+resource = ConditionVariable.new
+
 queue = Queue.new
-#(1..15).each do |i|
-#  queue.push i
-#end
+(1..15).each do |i|
+  queue.push i
+end
 
 threads =[]
 
@@ -20,12 +22,14 @@ threads =[]
       semaphores.synchronize do
         num = 0
         mutex.synchronize do
-          num = queue.pop unless queue.empty?
+          if !queue.empty?
+            num = queue.pop
+          else
+            resource.wait mutex
+          end
         end
         if num != 0
           print_data x, num
-        else
-          Thread.stop
         end
       end
     end
@@ -38,11 +42,9 @@ producer = Thread.new do
       num = Random.rand(100)
       mutex.synchronize do
         queue.push num
+        resource.broadcast
       end
       push_data "producer", num
-      if queue.size > 0
-        threads.each {|t| t.wakeup}
-      end
     end
   rescue => e
     p e
